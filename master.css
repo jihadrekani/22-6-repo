@@ -4,20 +4,9 @@ body{
 }
 
 /* start about section */
-.aboutsection{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 100px;
-}
-.aboutme{
-    margin: 0px 91px 0px 0px;
-    width: 50%;
-    font-size: 25px;
-    font-family: cursive;
-    
-}
-.mypic{
+
+
+.img-fluid{
     border-radius: 5px;
 }
 /* end about section */
