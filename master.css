@@ -1,3 +1,23 @@
+
 body{
-    background-color: red;
+    background-color: #dee2e6;
 }
+
+/* start about section */
+.aboutsection{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 100px;
+}
+.aboutme{
+    margin: 0px 91px 0px 0px;
+    width: 50%;
+    font-size: 25px;
+    font-family: cursive;
+    
+}
+.mypic{
+    border-radius: 5px;
+}
+/* end about section */
