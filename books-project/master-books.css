@@ -1,0 +1,15 @@
+.page-header{
+    text-align: center;
+    margin-top: 30px;
+    background-color: gold;
+    border-radius: 25px;
+    box-shadow: 0px 0px 17px 5px currentColor;
+    padding: 9px 0 9px;
+    font-family: cursive;
+
+}
+span{
+    color: #ea2135;
+    font-weight: bold;
+}
+

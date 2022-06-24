@@ -1,0 +1,111 @@
+/**
+ * Inits booklists carousel.
+ * @param {string} carouselSelector Selector of the element provided as the carousel container.
+ */
+function zBooklistCarousel(carouselSelector, opt) {
+
+    const $booklistCarouselContainer = $(carouselSelector)
+
+    if ($booklistCarouselContainer.data('loader') === null) {
+        console.error(`There are no valid booklist carousels with selector "${carouselSelector}"`)
+        return
+    }
+
+    const spinner = new ZLibrarySpinner($booklistCarouselContainer)
+    spinner.color('#acacac')
+    if ($booklistCarouselContainer.length) {
+        spinner.start()
+    }
+
+    function loadReadlistsToCarousel($carousel, booklistsInfo) {
+        let zBooklistCard
+
+        const composeBooklistCardCommonPart = () => {
+            zBooklistCard = document.createElement('z-readlist-card')
+            zBooklistCard.setAttribute('type', 'small')
+            zBooklistCard.classList.add('z-readlist-cell')
+        }
+
+        let composeBooklistCardSpecificPart = () => {}
+        if (booklistsInfo[0]['isPublic'] !== undefined) {
+            composeBooklistCardSpecificPart = (booklistInfo) => {
+                if (!booklistInfo.isPublic) {
+                    zBooklistCard.setAttribute('status', 'private')
+                }
+            }
+        }
+
+        const composeBooklistCard = (booklistInfo) => {
+            composeBooklistCardCommonPart()
+            composeBooklistCardSpecificPart(booklistInfo)
+        }
+
+        for (const booklistInfo of booklistsInfo) {
+            composeBooklistCard(booklistInfo)
+            $carousel.append(zBooklistCard)
+            zBooklistCard.fillWithData(booklistInfo)
+            zBooklistCard.renderData()
+        }
+
+        initCarousel($carousel[0])
+    }
+
+    function initCarousel(carousel) {
+        const carouselWidth = carousel.offsetWidth
+        const cellWidth = 138 // As set in styles
+        let groupCells = 3
+
+        if (carouselWidth && cellWidth) {
+            groupCells = Math.floor(carouselWidth / cellWidth)
+        }
+
+        new Flickity(carousel, {
+            cellSelector: '.z-readlist-cell',
+            cellAlign: 'left',
+            contain: true,
+            pageDots: false,
+            prevNextButtons: true,
+            groupCells,
+        })
+        spinner.stop()
+    }
+
+    $booklistCarouselContainer.lazy({
+        threshold: 0,
+        loadBooklists: function ($element, response) {
+            let requestUri
+
+            switch ($element.data('booklists_type')) {
+                case 'related':
+                    requestUri = '/papi/book/' + $element.data('book_id') + '/related-booklists'
+                    if ($(window).innerWidth() < 768) {
+                        requestUri += '?showOneBookCover=1'
+                    }
+                    break;
+                case 'user':
+                    requestUri = '/papi/booklist/current-user-readlists'
+                    break;
+            }
+
+            new ZLibraryResponse(requestUri)
+                .success(function (result) {
+                    if (!result.readlists.length) {
+                        if (opt.destroyContainer) {
+                            $element.parents('.related-booklists-lazy').remove()
+                        } else {
+                            $element.remove()
+                        }
+
+                        return
+                    }
+
+                    loadReadlistsToCarousel($element, result.readlists)
+                })
+                .error(function () {
+                    $element.remove()
+                })
+                .fetch()
+            response(true)
+        }
+    })
+}

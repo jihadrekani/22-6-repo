@@ -1,0 +1,535 @@
+$(function () {
+
+    const SendToTools = function ()
+    {
+        function init() {
+            if (!CurrentUser.isAuth()) {
+                initAuthEvents()
+                return
+            }
+            initEvents()
+            shareToWidget.tooltips.init()
+        }
+
+        function initEvents () {
+            // Menu for converted file
+            $(document).on('click', '#converterCurrentStatusesBox .menu-btn', function () {
+                const $thisMenu = $(this).siblings('.menu-content')
+                const isVisible = $thisMenu.is(':visible')
+                $('#converterCurrentStatusesBox .menu-content').hide()
+                if (!isVisible) {
+                    $thisMenu.show()
+                }
+            })
+
+            // Hide menu for converted file
+            $(document).on('click', function (e) {
+                const $target = $(e.target)
+                if ($target.hasClass('menu-btn')) {
+                    return
+                }
+                $('#converterCurrentStatusesBox .menu-content').hide()
+            })
+
+            // Hide menu for converted file after click on sendToEmailButton / shareToButton / btnCheckOtherFormats
+            $(document).on('click', '.dlDropdownBtn, #sendToEmailButtonBox .button-send-book, #shareToButtonBox .button-send-book', function () {
+                $('#converterCurrentStatusesBox .menu-content').hide()
+            })
+
+            // Send file from Share to
+            $(document).on('click', '.share-to-widget .send-to', function () {
+                if ($(this).hasClass('unavailable')) {
+                    if (isTouchDevice()) {
+                        const reason = $(this).find('.unavailable-reason').data('original-title')
+                        if (typeof reason === 'string' && reason.length) {
+                            new ZLibraryNotify({delay: 1500}).warning(reason)
+                        }
+                    }
+                    return false
+                }
+                const sendTo = $(this).data('send_to')
+                const convertedTo = $(this).closest('.share-to-widget').data('converted_to')
+
+                if (sendTo === 'googleDrive') {
+                    $.RPC('Metric::rpcEventX', {name: 'sendGDrive', 'ss': true, value: 1})
+                    sendToGoogleDriveAction.setConvertedTo(convertedTo).sendFile()
+                } else if (sendTo === 'telegram') {
+                    sendToTelegramAction.sendFile(convertedTo)
+                } else {
+                    sendToAction.sendFile(sendTo, convertedTo)
+                }
+            })
+            // Send file to kindle from Send-to-kindle
+            $(document).on('click', '.kindle__sendFileBtn', function () {
+                sendToAction.sendFile('kindle', $(this).data('converted_to'))
+            })
+
+            // Convert and send to Kindle
+            $(document).on('click', '.kindle__convertAndSend', function () {
+                const $that = $(this)
+                const convertTo = $that.data('convert_to')
+                convertationTools.doConvert(convertTo, function () {
+                    sendToAction.sendFile('kindle', convertTo, true)
+                    // Change button
+                    $that.html('<span>' + $that.data('text_for_sending') + '</span>').removeClass('kindle__convertAndSend').addClass('kindle__sendFileBtn').data('converted_to', convertTo)
+                })
+            })
+
+            // Convert file from download widget
+            $(document).on('click', '.converterLink', function () {
+                const convertTo = $(this).data('convert_to')
+                convertationTools.doConvert(convertTo, function (result) {
+                    if (typeof result === 'object' && typeof result.downloadUrl === 'string' && result.downloadUrl.length) {
+                        window.location.href = result.downloadUrl
+                    }
+                })
+            })
+
+            // Delete conversion status with error
+            $(document).on('click', '.status-error .delete-btn', function () {
+                const $that = $(this)
+                const jobId = $that.data('job_id')
+                $that.closest('.status-error').fadeOut(function () {
+                    $that.remove()
+                })
+                if (jobId) {
+                    convertationTools.deleteJob(jobId)
+                }
+            })
+
+            // Links in tooltips not working
+            $(document).on('click', '.share-to-widget .menu-row .tooltip-inner a', function () {
+                window.open($(this).attr('href'))
+                return false
+            })
+
+            // Run spinners after load page
+            convertationTools.runSpinners()
+        }
+
+        function initAuthEvents() {
+            const itemType = CurrentSiteMode === 'articles' ? 'articles' : 'books'
+            $(document).on('click', '.converterLink',function () {
+                CurrentUser.showAuthPopup('login', i18next.t('After authorization, you will be able to convert {{itemType}} using the «File Conversion» option', {itemType: itemType}))
+                $('#btnCheckOtherFormats').trigger('click')
+            })
+            $(document).on('click', '#sendToEmailButtonBox > button',function () {
+                CurrentUser.showAuthPopup('login', i18next.t('After authorization, you can get access to sending {{itemType}} to your Kindle using the «Send-to-Kindle» option', {itemType: itemType}))
+            })
+            $(document).on('click', '#shareToButtonBox > button',function () {
+                CurrentUser.showAuthPopup('login', i18next.t('After authorization, you will be able to send {{itemType}} to your email, Google Drive or Telegram app using the «Send to» option', {itemType: itemType}))
+            })
+        }
+
+        const convertationTools = {
+            jobsEvents: {
+                jobs: {},
+                set: function (jobId, event, callback) {
+                    if (typeof this.jobs[jobId] === 'undefined') {
+                        this.jobs[jobId] = {}
+                    }
+                    this.jobs[jobId][event] = callback
+                },
+                trigger: function (jobId, event, data) {
+                    if (typeof this.jobs[jobId] !== 'undefined' && typeof this.jobs[jobId][event] === 'function') {
+                        this.jobs[jobId]['success'](data)
+                    }
+                }
+            },
+            statusesChecker: {
+                interval: 10000,
+                intervalId: null,
+                isRunned: function () { return this.intervalId !== null },
+                run: function () {
+                    const statusesChecker = this
+                    if (statusesChecker.isRunned()) {
+                        return
+                    }
+                    statusesChecker.intervalId = setInterval(function () {
+                        statusesChecker.updateStatuses()
+                    }, statusesChecker.interval)
+                },
+                stop: function () {
+                    clearInterval(this.intervalId)
+                    this.intervalId = null
+                },
+                updateStatuses: function (prolongCallback) {
+                    const statusesChecker = this
+                    statusesChecker.getStatuses(function (response) {
+                        let jobsEventsDelaySec = 0 // delay is good for auto downloads and sending to..
+                        for(const job of response.jobs) {
+                            if (job.status === 'new') {
+                                continue
+                            }
+                            $('#converterCurrentStatusesBox .status-new').each(function () {
+                                if ($(this).data('job_id') == job.jobId) {
+                                    $(this).replaceWith($(job.message))
+                                    shareToWidget.tooltips.init()
+                                    if (job.status === 'ok') {
+                                        setTimeout(function () {
+                                            convertationTools.jobsEvents.trigger(job.jobId, 'success', job)
+                                        }, jobsEventsDelaySec * 1000)
+                                        jobsEventsDelaySec += 1
+                                    }
+                                }
+                            })
+                        }
+                        jobsEventsDelaySec = 0
+
+                        // call prolong function if exists new statuses, else stop
+                        if ($('#converterCurrentStatusesBox .status-new').length) {
+                            if (typeof prolongCallback === 'function') {
+                                prolongCallback()
+                            }
+                        } else if (statusesChecker.isRunned()) {
+                            statusesChecker.stop()
+                        }
+                    })
+                },
+                getStatuses: function (successCallback) {
+                    new ZLibraryResponse('/rpc.php?action=ConvertationTools::getCurrentJobsStatuses&clear=1&gg_json_mode=1&bookId=' + CurrentBook.id)
+                        .success(function (response) {
+                            successCallback(response)
+                        }).fetch()
+                }
+            },
+            getNewConvertationStatusTemplate: function () {
+                return $('#convertationStatusTemplates .status-new').clone()
+            },
+            doConvert: function (convertTo, successCallback) {
+                const $convertationStatusNewContent = this.getNewConvertationStatusTemplate()
+                $convertationStatusNewContent.find('.extension').text(convertTo)
+                const spinner = new ZLibrarySpinner($convertationStatusNewContent.find('.spinner-content'), 'button')
+
+                $('#converterCurrentStatusesBox').prepend($convertationStatusNewContent)
+                spinner.start()
+
+                const data = {'book_id': CurrentBook.id, 'convertTo': convertTo}
+                new ZLibraryResponse('/rpc.php?action=ConvertationTools::rpcConvert&gg_json_mode=1', data)
+                    .success(function (answer) {
+                        // If has error
+                        if (Array.isArray(answer.errors) && answer.errors.length) {
+                            const error = answer.errors.shift()
+                            if (typeof answer.response.znotifyType === 'string') {
+                                $convertationStatusNewContent.remove()
+                                new ZLibraryNotify({type: answer.response.znotifyType}).show(error.message)
+                            } else {
+                                const $convertationStatusErrorEl = $('#convertationStatusTemplates .status-error').clone()
+                                $convertationStatusErrorEl.find('.message').html(error.message)
+                                $convertationStatusNewContent.after($convertationStatusErrorEl)
+                                $convertationStatusNewContent.remove()
+                            }
+                            return
+                        }
+
+                        if (typeof successCallback === 'function') {
+                            convertationTools.jobsEvents.set(answer.response.jobId, 'success', successCallback)
+                        }
+
+                        // else update status
+                        if (typeof answer.response === 'object' && typeof answer.response.statusOkContent === 'string') {
+                            $convertationStatusNewContent.remove()
+                            $('#converterCurrentStatusesBox').prepend(answer.response.statusOkContent)
+                            convertationTools.jobsEvents.trigger(answer.response.jobId, 'success', answer.response)
+                        } else {
+                            $convertationStatusNewContent.data('job_id', answer.response.jobId)
+                            // first try is fast
+                            setTimeout(function () {
+                                convertationTools.statusesChecker.updateStatuses(function () {
+                                    convertationTools.statusesChecker.run()
+                                })
+                            }, 5000)
+                        }
+                    })
+                    .error(function () {
+                        $convertationStatusNewContent.remove()
+                    })
+                    .fetch()
+            },
+            deleteJob: function (jobId) {
+                new ZLibraryResponse('/rpc.php?action=ConvertationTools::deleteJob&gg_json_mode=1&jobId=' + jobId).fetch()
+            },
+            runSpinners: function () {
+                const $convertationSpinner = $('#converterCurrentStatusesBox .status-new .spinner-content')
+                if ($convertationSpinner.length && !$convertationSpinner.find('.spinner').length) {
+                    const spinner = new ZLibrarySpinner($convertationSpinner, 'button')
+                    spinner.start()
+                    convertationTools.statusesChecker.run()
+                }
+            }
+        }
+
+        // This is dropdown menu
+        const shareToWidget = {
+            tooltips: { // tooltips for warning messages
+                selector: '.share-to-widget .menu-row .zlibicon-warning:not(.tooltip-initialized)',
+                init: function () {
+                    $(this.selector).each(function () {
+                        $(this).addClass('tooltip-initialized')
+                        const opt = {html: true, placement: 'bottom', container: '#shareToTooltipsContainer'}
+                        const title = $(this).attr('title')
+                        if (typeof title === 'string' && title.indexOf('<a') !== -1) {
+                            opt.delay = {hide: 1500}
+                        }
+                        $(this).tooltip(opt)
+                    })
+                }
+            }
+        }
+
+        // general method for send files
+        const sendToAction = {
+            sendFile: function (sendTo, convertedTo, skipFirstNotify = false) {
+                if (!skipFirstNotify) {
+                    new ZLibraryNotify({delay: 1500}).info(i18next.t('The file will be sent shortly. Please wait'))
+                }
+
+                setTimeout(function () {
+                    new ZLibraryResponse('/papi/book/' + CurrentBook.id + '/send-to/' + sendTo, {'convertedTo': convertedTo})
+                        .success(function () {
+                            const messages = {
+                                'kindle': i18next.t('The file has been sent to your Kindle. Check your mailbox for the verification email from Amazon Kindle Support'),
+                                'email': i18next.t('The file has been sent to your Email. Check your mailbox'),
+                                'telegram': i18next.t('The file has been sent to your Telegram account'),
+                            }
+                            new ZLibraryNotify().success(
+                                typeof messages[sendTo] === 'string' ? messages[sendTo] : i18next.t('The file has been sent')
+                            )
+                            CurrentUser.addDownloadedBook(CurrentBook.id)
+                        }).fetch()
+                }, 1000)
+            }
+        }
+
+        const sendToTelegramAction = {
+            telegramConnection: {
+                connected: false,
+                statusChecker: { // verification of linking telegram account
+                    intervalId: null,
+                    attempts: 0,
+                    attemptsLimit: 200,
+                    attemptsDelay: 2000,
+                    start: function (connected) {
+                        const that = this
+                        if (that.intervalId) {
+                            return
+                        }
+                        that.attempts = 0
+                        that.intervalId = setInterval(function () {
+                            if (that.attempts > that.attemptsLimit) {
+                                new ZLibraryNotify().error(i18next.t('Access denied. Please link your zlibrary account to the bot via the {{- linkStart}}Edit Profile page{{- linkEnd}}', {linkStart: '<a href="/profileEdit.php">', linkEnd: '</a>'}))
+                                that.stop()
+                                return
+                            }
+                            that.attempts += 1
+                            sendToTelegramAction.telegramConnection.currentStatus(function () {
+                                that.stop()
+                                if (typeof connected === 'function') { connected() }
+                            })
+                        }, that.attemptsDelay)
+                    },
+                    stop: function () {
+                        clearInterval(this.intervalId)
+                    }
+                },
+                reset: function () {
+                    this.connected = false
+                    setTelegramBindingStatusToLocalStorage(null)
+                },
+                currentStatus: function (connected, disconnected) {
+                    const that = this
+                    if (that.connected) {
+                        if (typeof connected === 'function') { connected() }
+                        return
+                    }
+                    if (getTelegramBindingStatusFromLocalStorage() === true) {
+                        that.connected = true
+                        if (typeof connected === 'function') { connected() }
+                        return
+                    }
+                    new ZLibraryResponse('/papi/user/telegram/pinned')
+                        .success(function (response) {
+                            if (response.isPinned === true) {
+                                that.connected = true
+                                setTelegramBindingStatusToLocalStorage(true)
+                                if (typeof connected === 'function') { connected() }
+                            } else if (typeof disconnected === 'function') {
+                                disconnected()
+                            }
+                        }).fetch()
+                },
+                ready: function (action) {
+                    const that = this
+                    that.currentStatus(function () {
+                        return action()
+                    }, function () {
+                        generateTelegramHash($('<button></button>'))
+                        setTimeout(function () {
+                            that.statusChecker.start(function () {
+                                return action()
+                            })
+                        }, 3000)
+                    })
+                }
+            },
+            sendFile: function (convertedTo, skipNotify = false) {
+                if (!skipNotify) {
+                    new ZLibraryNotify({delay: 3000}).info(i18next.t('The file will be sent shortly. Please wait'))
+                }
+                this.telegramConnection.ready(function () {
+                    new ZLibraryResponse('/papi/book/' + CurrentBook.id + '/send-to/telegram', {'convertedTo': convertedTo})
+                        .success(function (result) {
+                            if (typeof result.errorKey === 'string') {
+                                // reset connection status and reconnect
+                                if (result.errorKey === 'user_not_found') {
+                                    sendToTelegramAction.telegramConnection.reset()
+                                    sendToTelegramAction.sendFile(convertedTo, true)
+                                    return
+                                }
+                                if (result.errorKey === 'long_processing') {
+                                    new ZLibraryNotify().info(i18next.t('Sending in progress. If the file does not arrive soon, please try again'))
+                                    return
+                                }
+                                // undefined errorKey
+                                new ZLibraryNotify().error(i18next.t('Something went wrong. Please reload the page and try again'))
+                                return
+                            }
+
+                            new ZLibraryNotify().success(i18next.t('The file has been sent to your Telegram account'))
+                            CurrentUser.addDownloadedBook(CurrentBook.id)
+                        }).fetch()
+                })
+            }
+        }
+
+        const sendToGoogleDriveAction = {
+            convertedTo: null, // is property because sendFile is called from different places
+            setConvertedTo: function (extension) {
+                this.convertedTo = extension
+                return this
+            },
+            authWindow: {
+                window: null,
+                open: function () {
+                    if (!this.window || this.window.closed) {
+                        this.window = window.open("", "Google", "width=500,height=500")
+                    }
+                },
+                close: function () {
+                    if (this.window) {
+                        this.window.close()
+                        this.window = null
+                    }
+                },
+                contentUri: function (uri) {
+                    if(this.window) {
+                        this.window.location.href = uri
+                    }
+                }
+            },
+            statusAutoupdater: {
+                interval: 2000,
+                intervalId: null,
+                isRunned: function () { return this.intervalId !== null },
+                start: function () {
+                    const statusAutoupdater = this
+                    if (statusAutoupdater.isRunned()) {
+                        return
+                    }
+                    statusAutoupdater.intervalId = setInterval(function () {
+                        statusAutoupdater.updateStatus()
+                    }, statusAutoupdater.interval)
+                },
+                stop: function () {
+                    clearInterval(this.intervalId)
+                    this.intervalId = null
+                },
+                updateStatus: function () {
+                    if (sendToGoogleDriveAction.tokenExists()) {
+                        sendToGoogleDriveAction.sendFile()
+                        this.stop()
+                    }
+                }
+            },
+            tokenExists: function () {
+                let cook = getCookie('google-oauth2-credentials')
+                let auth = cook ? JSON.parse(cook) : {}
+                let timestamp = new Date().getTime() / 1000
+                return auth.access_token && auth.created + auth.expires_in > timestamp
+            },
+            getRedirectUri: function (action) {
+                this.getAvailableAuthDomain(function (result) {
+                    action(result.redirect_uri)
+                })
+            },
+            getAvailableAuthDomain: function (action, attempt = 0) {
+                const that = this
+                new ZLibraryResponse('/papi/user/google/get-redirect/' + CurrentBook.id + '?attempt=' + attempt)
+                    .success(function (response) {
+                        if (!response || typeof response !== 'object' || !Object.keys(response).length) {
+                            new ZLibraryNotify().error(i18next.t('Something went wrong'))
+                            sendToGoogleDriveAction.authWindow.close()
+                            return
+                        }
+                        if (!response.auth_domain) {
+                            new ZLibraryNotify().error(i18next.t('No available authorization domains were found'))
+                            sendToGoogleDriveAction.authWindow.close()
+                            return
+                        }
+
+                        $.ajax({
+                            url: '//' + response.auth_domain + '/1pixel.php?v=' + new Date().getTime(),
+                            timeout: 7000,
+                            success: function(data, g, resp) {
+                                if (resp.status === 200 && resp.responseText.length) {
+                                    action(response)
+                                } else {
+                                    that.getAvailableAuthDomain(action, attempt + 1)
+                                }
+                            },
+                            error: function(data, g, resp) {
+                                that.getAvailableAuthDomain(action, attempt + 1)
+                            },
+                        })
+                    }).fetch()
+            },
+            doAuth: function () {
+                const that = this
+                that.authWindow.open()
+                that.getRedirectUri(function (redirectUri) {
+                    that.authWindow.contentUri(redirectUri)
+                    setTimeout(function () {
+                        that.statusAutoupdater.start()
+                    }, 2000)
+                })
+            },
+            sendFile: function () {
+                if (!this.tokenExists()) {
+                    return this.doAuth()
+                }
+                new ZLibraryNotify().info(i18next.t('The file will be sent shortly. Please wait'))
+                new ZLibraryResponse('/papi/book/' + CurrentBook.id + '/send-to/google-drive', {'convertedTo': this.convertedTo})
+                    .success(function () {
+                        new ZLibraryNotify().success(i18next.t('The file was sent to your Google Drive account. You will find it in the "<b>ZLibrary</b>" folder'))
+                        CurrentUser.addDownloadedBook(CurrentBook.id)
+                    })
+                    .error(function () {
+                        setCookie('google-oauth2-credentials', '', '', '/', Config.domainHost)
+                        try {
+                            json = JSON.parse(json.error)
+                            if (json.error.code == 401) {
+                                new ZLibraryNotify().error(i18next.t('Something went wrong with your Google Drive authorization. Please try again'))
+                                return
+                            }
+                            new ZLibraryNotify().error(json.error.message)
+                        } catch(err) {
+                            new ZLibraryNotify().error(json.error ? json.error : err)
+                        }
+                    }).fetch()
+            }
+        }
+
+        init()
+    }
+    new SendToTools()
+})

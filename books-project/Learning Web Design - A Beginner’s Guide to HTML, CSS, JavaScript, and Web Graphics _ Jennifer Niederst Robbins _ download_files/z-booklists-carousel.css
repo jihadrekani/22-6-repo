@@ -1,0 +1,31 @@
+.z-booklists-carousel { height: 256px }
+
+.z-booklists-carousel .flickity-prev-next-button {
+    opacity: 0;
+    width: 30px;
+    height: 40px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    -moz-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    -webkit-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.z-booklists-carousel .flickity-prev-next-button.previous {
+    border-radius: 0 2px 2px 0;
+    left: 0;
+}
+
+.z-booklists-carousel .flickity-prev-next-button.next {
+    border-radius: 2px 0 0 2px;
+    right: 0;
+}
+
+.z-booklists-carousel:hover .flickity-prev-next-button:not(:disabled) { opacity: 1 }
+.z-booklists-carousel .flickity-prev-next-button:hover .flickity-button-icon { fill: #49AFD0 }
+
+.z-booklists-carousel .flickity-prev-next-button .flickity-button-icon {
+    fill: #BFBFBF;
+    left: 7px;
+    top: 8px;
+    width: 15px;
+}

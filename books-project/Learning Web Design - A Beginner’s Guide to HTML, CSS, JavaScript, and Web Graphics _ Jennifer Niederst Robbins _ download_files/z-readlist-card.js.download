@@ -1,0 +1,449 @@
+/**
+ * @requires Flickity >=2.2.2
+ */
+// PREPARATIONS START
+
+const stylesheet = `
+:host { contain: content }
+
+.card-content {
+    display: block;
+    border: 1px solid #DDDDDD;
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    position: relative;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+:host([type="small"]:hover) > .card-content { border-color: #49AFD0 }
+:host([type="big"]:hover) > .card-content { box-shadow: 0px 2px 8px rgb(0 0 0 / 25%) }
+
+:host([type="big"]) > .card-content *:not(.books-count-label) { animation: fadeIn .5s }
+
+:host([type="big"]) > .card-content {
+    width: 100%;
+    height: 100%;
+    padding: 16px 16px 8px;
+    box-shadow: 0px 16px 24px rgb(0 0 0 / 6%),
+                0px 2px 6px rgb(0 0 0 / 4%),
+                0px 0px 1px rgb(0 0 0 / 4%);
+    font-weight: 500;
+    aspect-ratio: 17 / 30;
+}
+
+:host([type="small"]) > .card-content {
+    padding: 12px 14px 15px;
+    width: 128px;
+    height: 256px;
+    margin: 0;
+    margin-right: 10px;
+}
+
+.image-container {
+    overflow: hidden;
+    position: relative;
+    border-radius: 0 0 8px 8px;
+}
+
+:host([type="big"]) .image-container { height: 80% }
+:host([type="small"]) .image-container { height: 150px }
+
+.z-image-cell {
+    width: 100%;
+    transition: opacity 1.6s;
+    opacity: 0;
+}
+
+.z-image-cell.flickity-lazyloaded,
+.z-image-cell.flickity-lazyerror {
+    opacity: 1;
+}
+
+.folder-container {
+    position: absolute;
+    border-radius: 0 0 8px 8px;
+    contain: content;
+    overflow: hidden;
+}
+
+:host([type="big"]) .folder-container {
+    aspect-ratio: 104 / 80;
+    width: calc(100% - 28px);
+    bottom: min(62px, calc(20% + 3px));
+    left: 14px;
+}
+
+:host([type="small"]) .folder-container {
+    width: 104px;
+    height: 80px;
+    top: 83px;
+    left: 12px;
+}
+
+.folder-container__image {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg width='104' height='80' viewBox='0 0 104 80' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg filter='url(%23filter0_i)'%3E%3Cpath d='M93.2526 16.3251L37.9519 16.279L33.4211 4.8405L31.5048 9.61104e-06H5.03428C4.37281 -0.00129392 3.7176 0.130013 3.10623 0.386396C2.49487 0.64278 1.93938 1.0192 1.47165 1.49404C1.00392 1.96889 0.633146 2.53283 0.380605 3.1535C0.128064 3.77416 -0.00127453 4.43935 9.46699e-06 5.11088V74.8891C9.46699e-06 76.2446 0.530403 77.5446 1.47451 78.5031C2.41862 79.4615 3.69911 80 5.03428 80H98.9657C100.301 80 101.581 79.4615 102.525 78.5031C103.47 77.5446 104 76.2446 104 74.8891V26.8733C103.995 24.5653 103.247 22.3222 101.871 20.485C100.495 18.6477 98.5663 17.3168 96.3771 16.6944C95.2598 16.4389 93.2526 16.3251 93.2526 16.3251Z' fill='%2356B1BE'/%3E%3C/g%3E%3Cdefs%3E%3Cfilter id='filter0_i' x='0' y='0' width='104' height='82' filterUnits='userSpaceOnUse' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-opacity='0' result='BackgroundImageFix'/%3E%3CfeBlend mode='normal' in='SourceGraphic' in2='BackgroundImageFix' result='shape'/%3E%3CfeColorMatrix in='SourceAlpha' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0' result='hardAlpha'/%3E%3CfeOffset dy='2'/%3E%3CfeGaussianBlur stdDeviation='2.5'/%3E%3CfeComposite in2='hardAlpha' operator='arithmetic' k2='-1' k3='1'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.15 0'/%3E%3CfeBlend mode='normal' in2='shape' result='effect1_innerShadow'/%3E%3C/filter%3E%3C/defs%3E%3C/svg%3E%0A") !important;
+    background: transparent center bottom/contain no-repeat scroll;
+    transition: transform .5s;
+}
+
+.folder-container__favorite-identifier,
+.folder-container__private-identifier {
+    background: transparent center bottom/contain no-repeat scroll;
+    width: 48%;
+    aspect-ratio: 1 / 1;
+    position: absolute;
+    bottom: 10px;
+    left: -16px;
+    transition: transform .5s;
+}
+
+.folder-container__private-identifier {
+    background-image: url(/img/readlist/cover-private.svg) !important;
+}
+.folder-container__favorite-identifier { 
+    background-image: url(/img/readlist/cover-favorite.svg) !important;
+    opacity: .8;
+}
+.folder-container__favorite-identifier:hover { opacity: 1 }
+.folder-container__favorite-identifier.active { background-image: url(/img/readlist/cover-favorite-filled.svg) !important }
+
+@media (min-width:768px) {
+    :host(:hover) .folder-container__image { transform: translateY(43%) }
+    :host(:hover) .folder-container__private-identifier,
+    :host(:hover) .folder-container__favorite-identifier {
+        transform: translateY(-20%);
+    }
+    :host(:hover) .books-count-label { opacity: 1 }
+}
+
+.books-count-label {
+    position: absolute;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    right: 6px;
+    top: 38.3%;
+    transform: translateY(-50%);
+    width: 47px;
+    text-align: center;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #49AFD0;
+    padding: 3px 5px;
+    line-height: 1;
+    background-color: var(--color-white, #FFFFFF);
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
+    opacity: 0;
+    transition: opacity linear .3s;
+}
+
+.books-count-label::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    background-image: url(/img/readlist/ico-book-closed.svg);
+}
+
+.card-title {
+    display: -webkit-box;
+    word-break: break-word;
+    max-height: 65px;
+    overflow: hidden;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    color: #8C8C8C;
+    text-decoration: none;
+}
+
+:host([type="big"]) .card-title {
+    position: absolute;
+    bottom: 8px;
+    height: 46px;
+    max-height: calc(20% - 8px);
+    max-width: calc(100% - 32px);
+    -webkit-line-clamp: 2;
+    margin-top: 8px;
+}
+
+:host([type="small"]) .card-title {
+    margin-top: 15px;
+    text-transform: uppercase;
+}
+
+.card-title:hover {
+    text-decoration-style: solid;
+    text-decoration-line: underline;
+}
+
+/* ANIMATIONS SECTION BEGIN */
+@keyframes fadeIn {
+    from { opacity: 0 }
+    to { opacity: 1 }
+}
+/* ANIMATIONS SECTION END */
+`
+
+// TEMPLATE CREATING SECTION START
+
+const readlistCardTemplate = document.createDocumentFragment()
+const style = document.createElement('style')
+style.innerHTML = stylesheet
+readlistCardTemplate.appendChild(style)
+
+const cardContent = document.createElement('a')
+cardContent.target = '_blank'
+cardContent.classList.add('card-content')
+
+const imageContainer = document.createElement('div')
+imageContainer.classList.add('image-container')
+
+const folderContainer = document.createElement('div')
+folderContainer.classList.add('folder-container')
+const folderImage = document.createElement('div')
+folderImage.classList.add('folder-container__image')
+folderContainer.appendChild(folderImage)
+
+const cardTitle = document.createElement('span')
+cardTitle.classList.add('card-title')
+
+cardContent.appendChild(imageContainer)
+cardContent.appendChild(folderContainer)
+cardContent.appendChild(cardTitle)
+readlistCardTemplate.appendChild(cardContent)
+
+// TEMPLATE CREATING SECTION END
+
+const isMobile = isTouchDevice()
+// PREPARATIONS END
+
+/**
+ * Attributes:
+ * {boolean} `autonomous`   If set, card fetches all the required information and renders on its own.
+ *                          Otherwise, responsibility for filling the card with data and rendering it lies on element implementor
+ *                          {@see fillWithData}, {@see renderData}
+ * {int}     `readlist_id`  Id of the readlist represented by card. Required if `autonomous` is set as true.
+ * {string}  `type`         The style type card should implement (available: `big`, `small`).
+ * {string}  `status`       Booklist specific status {e. g. `private`, `favorite`}
+ *
+ * @var {int}           readlistId
+ * @var {bool}          isMobile
+ * @var {string}        href
+ * @var {string}        title
+ * @var {string|int}    booksCount
+ * @var {string[]}      covers
+ * @var {DOMElement}    statusIdentifier
+ * @var {flickity}      flickityHandler
+ *
+ * @dependsOn isMobile
+ */
+class ZReadlistCard extends HTMLElement
+{
+
+    /** Creates element, checks if autonomous fetching needed. */
+    connectedCallback()
+    {
+        if (this.shadowRoot) return
+
+        const shadowRoot = this.attachShadow({mode: 'open'})
+        shadowRoot.appendChild(readlistCardTemplate.cloneNode(true))
+
+        if (this.getAttribute('autonomous') !== null) {
+            this.readlistId = this.getAttribute('readlist_id')
+            if (this.readlistId === null) {
+                console.error("Booklist id aren't provided for", this)
+                return
+            }
+
+            this.fetchData().then(() => this.renderData())
+        }
+    }
+
+    /**
+     * Fills inner class fields with data.
+     * If `autonomous` is set as false, data is provided manually via this method.
+     *
+     * @param {string}       href       A link to the readlist page.
+     * @param {string[]}     covers     An array of links to the readlist's books covers.
+     * @param {int}          booksCount The readlist's books count.
+     * @param {string}       title      The readlist's title.
+     */
+    fillWithData({href, covers, booksCount, title}) {
+        ({
+            href: this.href,
+            title: this.title,
+            booksCount: this.booksCount,
+            covers: this.covers,
+        } = {href, title, booksCount: booksCount < 100 ? booksCount : '99+', covers: isMobile && covers.length > 0 ? [covers[0]] : covers})
+    }
+
+    /**
+     * Fetches data from readlist depending on `this.readlistId`.
+     * Probably shouldn't be invoked, when managing data manually.
+     *
+     * @return {promise} When fetching is complete, or an error is encountered.
+     */
+    fetchData()
+    {
+        return new ZLibraryResponse(`/papi/booklist/${this.readlistId}/get-show-info`)
+            .success((readlistShowInfo) => {
+                this.fillWithData(readlistShowInfo)
+                return Promise.resolve()
+            })
+            .error(() => {
+                this.disconnect()
+                return Promise.reject()
+            })
+            .fetch()
+    }
+
+    /**
+     * Visually shows applied data, settles UX behavior.
+     */
+    renderData()
+    {
+        if (this.href === null || this.title === null || this.booksCount === null) {
+            console.error('There are no data in', this)
+            return
+        }
+
+        // Card title
+        this.shadowRoot.querySelector('.card-title').innerHTML = this.title
+
+        // Card href
+        this.shadowRoot.querySelector('.card-content').href = this.href
+
+        const folderContainerDOM = this.shadowRoot.querySelector('.folder-container__image')
+
+        // Card books count
+        const booksCountLabel = document.createElement('span')
+        booksCountLabel.classList.add('books-count-label')
+        booksCountLabel.textContent = this.booksCount
+        folderContainerDOM.appendChild(booksCountLabel)
+
+        // Status {private/favorite}
+        if (this.getAttribute('status') !== undefined) {
+            this.setStatus(this.getAttribute('status'))
+        }
+
+        // Card covers
+        let DOMCoversString = ''
+        for (const cover of this.covers) {
+            DOMCoversString += `<img data-flickity-lazyload="${cover}" class="z-image-cell">`
+        }
+        const DOMImageContainer = this.shadowRoot.querySelector('.image-container')
+        DOMImageContainer.innerHTML = DOMCoversString
+
+        // Flickity logic
+
+        let slideTimer
+        let isMouseOnCard = false
+        let isSettled = false
+
+        const prepareSlide = () => slideTimer = setTimeout(() => {
+            this.flickityHandle.next()
+            slideTimer = null
+        }, 100)
+
+        this.flickityHandle = new Flickity(DOMImageContainer, {
+            cellSelector: '.z-image-cell',
+            lazyLoad: 1,
+            cellAlign: 'left',
+            contain: true,
+            draggable: false,
+            prevNextButtons: false,
+            pageDots: false,
+            wrapAround: true,
+            autoPlay: false,
+            percentPosition: true,
+            pauseAutoPlayOnHover: false,
+            selectedAttraction: .01,
+            friction: .2,
+            on: {
+                change: () => {
+                    isSettled = false
+                },
+                settle: function() {
+                    isSettled = true
+                    if (isMouseOnCard && slideTimer == null) {
+                        prepareSlide()
+                    }
+                }
+            }
+        })
+
+        $(this)
+            .mouseenter(() => {
+                isMouseOnCard = true
+                if (isSettled) {
+                    prepareSlide()
+                }
+            })
+            .mouseleave(() => {
+                isMouseOnCard = false
+                clearTimeout(slideTimer)
+                slideTimer = null
+            });
+    }
+
+    /**
+     * @returns {string[]} The list of event-emitting statuses.
+     */
+    static get EVENT_GENERATING_STATUSES() {
+        return [
+            'favorite',
+        ]
+    }
+
+    /**
+     * Sets and processes readlist special status {e.g. `private`, `favorite`}.
+     * @param {string} status
+     */
+    setStatus(status)
+    {
+        this.statusIdentifier = document.createElement('div')
+        this.statusIdentifier.classList.add(`folder-container__${status}-identifier`)
+        this.statusIdentifier.classList.add('active')
+        this.shadowRoot.querySelector('.folder-container__image').appendChild(this.statusIdentifier)
+
+        if (!ZReadlistCard.EVENT_GENERATING_STATUSES.includes(status)) return
+
+        // Set event listener only if status is to dispatch events
+        this.statusIdentifier.addEventListener('click', (event) => {
+            const isActive = this.statusIdentifier.classList.contains('active')
+            this.dispatchEvent(new CustomEvent(`${status}-identifier-click`, { detail: {isActive} }))
+            event.preventDefault()
+        })
+    }
+
+    /**
+     * Sets whether is status currently active.
+     * @param {bool} isActive
+     */
+    setIsStatusActive(isActive)
+    {
+        if (this.statusIdentifier === null) return
+
+        if (isActive) {
+            this.statusIdentifier.classList.add('active')
+        } else {
+            this.statusIdentifier.classList.remove('active')
+        }
+    }
+
+    /**
+     * All activity considering element deleting from DOM-tree goes here.
+     */
+    disconnect()
+    {
+        this.remove()
+    }
+}
+
+customElements.define('z-readlist-card', ZReadlistCard)
