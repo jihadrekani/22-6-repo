@@ -12,7 +12,7 @@
 </head>
 <body>
     <!-- start header -->
-    <header class="p-3 bg-dark text-white">
+     <nav class="p-3 bg-dark text-white">
         <div class="container">
             <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
                 <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none">
@@ -23,8 +23,8 @@
 
                 <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
                     <li class="pagename"><a href="#" class="nav-link px-2 text-secondary">JiHad JR</a></li>
-                    <li><a href="#about-me" class="nav-link px-2 text-white">About</a></li>
-                    <li><a href="#skills-section" class="nav-link px-2 text-white">skills</a></li>
+                    <li><a href="http://127.0.0.1:5500/index.html#about-me" class="nav-link px-2 text-white">About</a></li>
+                    <li><a href="http://127.0.0.1:5500/index.html#skills-section" class="nav-link px-2 text-white">skills</a></li>
                     <li><a href="#" class="nav-link px-2 text-white">projects</a></li>
                     <li><a href="#" class="nav-link px-2 text-white">contact</a></li>
                 </ul>
@@ -36,26 +36,32 @@
                 </div>
             </div>
         </div>
-    </header>
+    </nav> 
     <!-- end header -->
+ <div class="container">
 
-    <button  class="resize-to-home-btn" ><i class="bi bi-arrow-left"></i>Home</button>
-    <form>
-        <div>
-        <label for="url">url</label>
-        <input type="text" id="url" placeholder=" put image's url">
-    </div>
-    <br>
-        
+    <a href="/index.html"><button   class="resize-to-home-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+      </svg>  Home</button></a>
+      <img class="image" src="/project-one/photo-1655617193610-1777317460bd.jpg" alt="iamge" style="display: block" id="ourImage" />
+    <form action="#">
+        <div class="my-3">
+        <label for="url">Unsplash  url</label>
+        <input  type="text" id="url">
+    </div >
+        <div class="my-3">
         <label for="width">width </label>
-        <input type="text" id="width" placeholder="width">
-    
+        <input type="text" id="width" >
+    </div>
+    <div class="my-3">
         <label for="height"> height </label>
-        <input type="text" id="height" placeholder="height">
-    
+        <input type="text" id="height">
+        <button class="btn-resize  btn-primary" onclick="resize()">Resize</button>
     </form>
+    <div class="d-block" id="new-url">new URL</div>
+</div> 
 
-
+<script src="/project-one/main.js" ></script>
 </body>
 </html>
 
