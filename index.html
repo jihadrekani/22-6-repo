@@ -14,10 +14,8 @@
 
 </head>
 
-<body>
+<body id="body" >
     <!-- start nav -->
-
-
     <nav class="p-3 bg-dark text-white">
         <div class="container">
             <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
@@ -36,8 +34,12 @@
                 </ul>
             </div>
         </div>
+        <div class="text-end">
+            <button type="button" id="dark" class="btn btn-outline-light me-2 dark ">change mode</button>
+          </div>
     </nav>
     <!-- end nav -->
+
 
 
     <!-- start about section -->
@@ -150,18 +152,18 @@
         <!-- end skills section -->
 
         <!-- start project section -->
-        <section id="projects-section">
+        <section class="section" id="projects-section">
 
             <div class="container px-4 py-5" id="icon-grid">
 
-                <h2 class="pb-2 border-bottom ">Projects</h2>
+                <h2 class="pb-2 border-bottom projects ">Projects</h2>
                 <div class="container pt-3 ">
                     <div class="row mb-3">
                         <div class="col ">
-                            <div class="card" style="width: 100%;">
+                            <div class="card " style="width: 100%;">
                                 <div class="card-body ">
                                     <h5 class="card-title">Resizing photos</h5>
-                                    <p class="card-text" style="direction:rtl"> هەر وێنەکێ تە بڤێت ب هەر قەبارەکێ ل وێبسایتێ  <bdi>unsplash</bdi> بتنێ لینکێ وی وێنەی بکە دناڤ خانێ دا و قەبارێ تە بڤێت دیار بکە</p>
+                                    <p class="card-text card-size " style="direction:rtl"> هەر وێنەکێ تە بڤێت ب هەر قەبارەکێ ل وێبسایتێ  <bdi>unsplash</bdi> بتنێ لینکێ وی وێنەی بکە دناڤ خانێ دا و قەبارێ تە بڤێت دیار بکە</p>
                                     <a href="project-one/index.html" target="_blank" class="btn btn-primary ">Click here</a>
                                 </div>
                             </div>
@@ -170,7 +172,7 @@
                             <div class="card" style="width: 100%;">
                                 <div class="card-body">
                                     <h5 class="card-title">Books</h5>
-                                    <p class="card-text" style="direction:rtl">ژ بوو بدەستڤەئینانا هەمی پەرتوکێن قوتابخانــا 
+                                    <p class="card-text card-size" style="direction:rtl">ژ بوو بدەستڤەئینانا هەمی پەرتوکێن قوتابخانــا 
                                         لڤێرێ تـو دکاری هەمی پەرتوکێن قوتابخــانا بدەست خوڤە بینی..</p>
                                     <a href="/books-project/index-books.html" class="btn btn-primary">Click here</a>
                                 </div>
@@ -182,7 +184,7 @@
                             <div class="card" style="width: 100%;">
                                 <div class="card-body">
                                     <h5 class="card-title">Card title</h5>
-                                    <p class="card-text">Some quick example text to build on the card title and make up
+                                    <p class="card-text card-size">Some quick example text to build on the card title and make up
                                         the bulk of the card's content.</p>
                                     <a href="#" class="btn btn-primary">Go somewhere</a>
                                 </div>
@@ -191,8 +193,8 @@
                         <div class="col">
                             <div class="card" style="width: 100%;">
                                 <div class="card-body">
-                                    <h5 class="card-title">Card title</h5>
-                                    <p class="card-text">Some quick example text to build on the card title and make up
+                                    <h5 class="card-title ">Card title</h5>
+                                    <p class="card-text card-size">Some quick example text to build on the card title and make up
                                         the bulk of the card's content.</p>
                                     <a href="#" class="btn btn-primary">Go somewhere</a>
                                 </div>
@@ -212,7 +214,7 @@
 
 
 
-
+<script src="/main.js"></script>
 </body>
 
 </html>

@@ -5,10 +5,26 @@ body{
     background-color: #dee2e6;
 }
 
+
+.dark{
+    background-color: rgb(37, 31, 31);
+    color: white;
+}
+.dark .section{
+    color: black;
+
+}
+.dark .section .projects{
+    color: white;
+}
+
+
+
 /* start about section */
-
-
 .img-fluid{
     border-radius: 5px;
 }
 /* end about section */
+.card-size{
+    font-size: larger;
+}
