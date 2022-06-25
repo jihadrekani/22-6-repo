@@ -8,8 +8,36 @@
     font-family: cursive;
 
 }
-span{
+.booksnumber{
     color: #ea2135;
     font-weight: bold;
 }
 
+.col2, .col3{
+    visibility: hidden;
+}
+.they-say{
+    margin-top: 80px;
+    margin-bottom: 80px;
+}
+
+.they-say .sayone{
+    background-color: #212529;
+    font-size: 23px;
+    border-radius: 30px;
+    padding: 5px 0px 5px 18px;
+    color: white;
+}
+.they-say .saytwo{
+    background-color: #212529;
+    font-size: 23px;
+    border-radius: 30px;
+    padding: 5px 0px 5px 18px;
+    color: white;
+    margin-top: 75px;
+}
+
+.Austin, .Lahiri{
+    font-weight: bold;
+    color: gold;
+}
