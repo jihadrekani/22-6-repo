@@ -39,8 +39,10 @@
 }
 .books-to-home-btn{
 
-    margin: 10px 0 10px 10px;
-    border-radius: 4px;
+font-size: 22px;
+text-decoration: none;
+margin-left: 25px;
+
 }
 .books-coming{
     text-align: center;
