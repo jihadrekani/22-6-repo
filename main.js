@@ -3,6 +3,6 @@ console.log(dark)
 
 const body = document.getElementById("body")
 
-dark.addEventListener("click" , ( )=>{
+dark.addEventListener("click" , ()=>{
     body.classList.toggle("dark")
 })
