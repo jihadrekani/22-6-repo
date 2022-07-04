@@ -31,3 +31,21 @@ margin-right: auto;
 .newurltext{
     display: block;
 }
+
+
+
+#new-url{
+    background-color: aqua;
+    padding: 7px;
+    margin-top: 20px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+#new-url:hover{
+    background-color: rgb(26, 100, 100);
+}
+#new-url:active{
+    background-color: rgb(18, 196, 56);
+    border: 2px solid black;
+}
+
