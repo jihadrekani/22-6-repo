@@ -43,16 +43,6 @@ body{
 
 
 
-
-
-
-
-
-
-
-
-
-
 .skills{
     padding-top: 50px;
     padding-bottom: 50px;
@@ -61,7 +51,7 @@ body{
 .skills h2{
     font-weight: bold;
     font-size: 30px;
-    color: blue;
+    color: black;
     margin: 0 0 50px;
     text-align: center;
 }
